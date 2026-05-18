@@ -109,6 +109,14 @@ case "${1:-help}" in
   binder-analyze) cmd_binder_analyze "${@:2}" ;;
   soong-inspect) cmd_soong_inspect "${@:2}" ;;
   api-diff)     cmd_api_diff "${@:2}" ;;
+adb-check)      run_tool "adb_framework_manager.py" check ;;
+  adb-pull)       [[ $# -lt 2 ]] && { log_err "Usage: $0 adb-pull <remote> [--local <path>]"; exit 1; }
+                  run_tool "adb_framework_manager.py" pull "$@" ;;
+  adb-push)       [[ $# -lt 3 ]] && { log_err "Usage: $0 adb-push <local> <remote>"; exit 1; }
+                  run_tool "adb_framework_manager.py" push "$@" ;;
+  adb-restart)    run_tool "adb_framework_manager.py" restart ;;
+  adb-logcat)     run_tool "adb_framework_manager.py" logcat "$@" ;;
+  adb-props)      run_tool "adb_framework_manager.py" props "$@" ;;
   help|-h|--help) usage ;;
   *)
     log_err "Unknown command: $1"
