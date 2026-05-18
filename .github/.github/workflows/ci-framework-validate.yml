@@ -1,0 +1,69 @@
+name: CI - Framework Validation & Tools
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'tools/*.py'
+      - 'hack-framework.sh'
+      - 'Makefile'
+      - '.github/workflows/ci-framework-validate.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'tools/*.py'
+      - 'hack-framework.sh'
+      - 'Makefile'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.9', '3.10', '3.11']
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install Linters & Dependencies
+        run: |
+          python -m pip install --upgrade pyflakes pycodestyle
+          sudo apt-get update && sudo apt-get install -y make bash coreutils
+
+      - name: Setup CLI & Tools
+        run: make setup
+
+      - name: Lint Python Tools
+        run: |
+          pyflakes tools/*.py
+          pycodestyle --max-line-length=120 tools/*.py
+
+      - name: Validate CLI & Makefile
+        run: |
+          ./hack-framework.sh help
+          ./hack-framework.sh env-check
+          make help
+          make env-check
+
+      - name: Create Test Fixtures
+        run: |
+          mkdir -p test_fixtures/{logs,build,api}
+          echo -e "binder: 1000:1000 transaction 1 from 1234:5678 to 9876:5432\nbinder: 1000:1000 transaction 2 from 1111:2222 to 9876:5432" > test_fixtures/logs/binder.log
+          echo -e "cc_library {\n  name: \"libexample\",\n  deps: [\"libbase\"],\n  srcs: [\"src.cpp\"]\n}" > test_fixtures/build/Android.bp
+          echo -e "package android {\n  class Foo {\n    method void bar()\n  }\n}" > test_fixtures/api/old.txt
+          cp test_fixtures/api/old.txt test_fixtures/api/new.txt
+          echo "  class Baz {\n    method void qux()\n  }" >> test_fixtures/api/new.txt
+
+      - name: Run Tool Validation via Makefile
+        run: |
+          make binder-analyze BINDER_LOG=test_fixtures/logs/binder.log
+          make soong-inspect SOONG_DIR=test_fixtures/build
+          make api-diff OLD_API=test_fixtures/api/old.txt NEW_API=test_fixtures/api/new.txt
+
+      - name: Cleanup Artifacts
+        run: rm -rf test_fixtures
