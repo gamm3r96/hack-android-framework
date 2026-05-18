@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# hack-framework.completion - Tab completion for hack-framework.sh
+# Usage: source hack-framework.completion
+
+_hack_framework_completions() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    local commands="setup env-check logcat patch-apply binder-analyze soong-inspect api-diff help"
+
+    # Suggest subcommands on first argument
+    if [[ ${COMP_CWORD} -eq 1 ]]; then
+        COMPREPLY=($(compgen -W "${commands}" -- "$cur"))
+        return 0
+    fi
+
+    local cmd="${COMP_WORDS[1]}"
+    case "$cmd" in
+        logcat)
+            COMPREPLY=($(compgen -W "--services --buffer -h" -- "$cur"))
+            ;;
+        patch-apply)
+            COMPREPLY=($(compgen -W "--root --dry-run -h" -- "$cur"))
+            ;;
+        binder-analyze)
+            COMPREPLY=($(compgen -W "--json -h" -- "$cur"))
+            ;;
+        setup|env-check|soong-inspect|api-diff|help)
+            COMPREPLY=($(compgen -W "-h" -- "$cur"))
+            ;;
+    esac
+}
+
+# Register completion
+complete -F _hack_framework_completions hack-framework.sh
+complete -F _hack_framework_completions hack-framework
+
+# Zsh compatibility hint
+if [[ -n "$ZSH_VERSION" ]]; then
+    autoload -Uz bashcompinit && bashcompinit
+fi
